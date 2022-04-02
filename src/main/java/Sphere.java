@@ -6,12 +6,14 @@ public class Sphere implements Drawable{
     private final Color color;
     private final float radius;
     private final float reflectivity;
+    private final float glowIntensity;
 
-    public Sphere(Vector3f position, Color color, float radius, float reflectivity) {
+    public Sphere(Vector3f position, Color color, float radius, float reflectivity, float glowIntensity) {
         this.position = position;
         this.color = color;
         this.radius = radius;
         this.reflectivity = reflectivity;
+        this.glowIntensity = glowIntensity;
     }
 
     private float distanceToCenter(Vector3f point){
@@ -46,5 +48,15 @@ public class Sphere implements Drawable{
 
     public float getReflectivity() {
         return reflectivity;
+    }
+
+    @Override
+    public float getBaseGlowIntensity() {
+        return glowIntensity;
+    }
+
+    @Override
+    public Color getGlowColor() {
+        return color;
     }
 }

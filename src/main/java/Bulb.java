@@ -1,5 +1,6 @@
 import javax.vecmath.Vector3f;
 import java.awt.*;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static processing.core.PApplet.*;
@@ -13,8 +14,10 @@ public class Bulb implements Drawable{
     private final float granularity;
     private final Color startColor;
     private final Color endColor;
+    private final Color glowColor;
+    private final float glowIntensity;
 
-    public Bulb(Vector3f position, float reflectivity, int steps, float period, float granularity, Color startColor, Color endColor) {
+    public Bulb(Vector3f position, float reflectivity, int steps, float period, float granularity, Color startColor, Color endColor, Color glowColor, float glowIntensity) {
         this.position = position;
         this.reflectivity = reflectivity;
         this.steps = steps;
@@ -22,6 +25,8 @@ public class Bulb implements Drawable{
         this.granularity = granularity;
         this.startColor = startColor;
         this.endColor = endColor;
+        this.glowColor = glowColor;
+        this.glowIntensity = glowIntensity;
     }
 
     public float distanceToSurface(int timeIndex, Vector3f point){
@@ -91,33 +96,25 @@ public class Bulb implements Drawable{
     public Color getColor(int timeIndex, Vector3f position) {
         float[] rdr = iterate(timeIndex, position);
 
-        if(rdr[1] > 10000000000f) rdr[1] = 10000000000f;
-        float scale = log(rdr[1]) * (float)Math.PI;
-
         //Some magic numbers that look good
-        scale = constrain((scale-5)/15, 0, 1);
+        float scale = constrain(rdr[0]/5, 0, 1);
 
-//        float[] baseColor = new float[3];
-//        baseColor[0] = constrain(cos(scale),0,1);
-//        baseColor[1] = constrain(sin(scale),0,1);
-//        baseColor[2] = constrain(cos(scale + (float)Math.PI),0,1);
-//        return new Color(baseColor[0],baseColor[1],baseColor[2]);
+        //System.out.println(Arrays.toString(rdr));
 
-        float[] startComponents = startColor.getColorComponents(new float[3]);
-        float[] endComponents = endColor.getColorComponents(new float[3]);
-
-        float redDiff = endComponents[0] - startComponents[0];
-        float greenDiff = endComponents[1] - startComponents[1];
-        float blueDiff = endComponents[2] - startComponents[2];
-
-        return new Color(
-                startComponents[0] + (redDiff * scale),
-                startComponents[1] + (greenDiff * scale),
-                startComponents[2] + (blueDiff * scale)
-        );
+        return Renderer.interpolate(startColor, endColor, scale);
     }
 
     public float getReflectivity() {
         return reflectivity;
+    }
+
+    @Override
+    public float getBaseGlowIntensity() {
+        return glowIntensity;
+    }
+
+    @Override
+    public Color getGlowColor() {
+        return glowColor;
     }
 }

@@ -17,7 +17,7 @@ public class MovieConverter {
             new File("./movie/").mkdir();
 
             OpenCVFrameConverter.ToIplImage grabberConverter = new OpenCVFrameConverter.ToIplImage();
-            FFmpegFrameRecorder recorder = new FFmpegFrameRecorder("./movie/mandelbulb.mp4", width, height);
+            FFmpegFrameRecorder recorder = new FFmpegFrameRecorder("./movie/mandelbulbHighFps.mp4", width, height);
 
             File screenshotDirectory = new File("./frames");
             File[] screenshots = screenshotDirectory.listFiles();
@@ -30,10 +30,13 @@ public class MovieConverter {
                         .collect(Collectors.toList());
 
                 recorder.setFrameRate(10);
-                recorder.setVideoCodec(avcodec.AV_CODEC_ID_H264);
-                recorder.setVideoBitrate(8000000);
+                recorder.setVideoCodec(avcodec.AV_CODEC_ID_MPEG4);
+                recorder.setVideoBitrate(300000000);
                 recorder.setFormat("mp4");
                 recorder.setVideoQuality(0);
+                //recorder.setAspectRatio(width / (double)height);
+                recorder.setImageWidth(width);
+                recorder.setImageHeight(height);
                 recorder.start();
 
                 for (String fileName : fileNames) {
@@ -48,6 +51,6 @@ public class MovieConverter {
     }
 
     public static void main(String[] args){
-        new MovieConverter().convertFramesToMovie(500, 500);
+        new MovieConverter().convertFramesToMovie(Renderer.WIDTH, Renderer.HEIGHT);
     }
 }

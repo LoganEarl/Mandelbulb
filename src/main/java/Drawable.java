@@ -7,4 +7,6 @@ public interface Drawable {
     Vector3f getNormalAtSurface(int timeIndex, Vector3f position);
     Color getColor(int timeIndex, Vector3f position);
     float getReflectivity();
+    float getBaseGlowIntensity();
+    Color getGlowColor();
 }
