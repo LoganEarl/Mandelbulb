@@ -35,7 +35,7 @@ public class Renderer extends PApplet {
     //Rendering stuff
     private final int lightBounces = 7;
     private final List<Long> frameTimings = new LinkedList<>();
-    private int timeIndex = 1;
+    private int timeIndex = 0;
     private boolean shouldRestartCurrentFrame = true;
     private int imageIndex = 0;
     private static final int targetFrames = 900;
