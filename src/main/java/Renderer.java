@@ -6,15 +6,15 @@ import javax.vecmath.Vector3f;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
 
 @SuppressWarnings("FieldMayBeFinal")
 public class Renderer extends PApplet {
     public static final int WIDTH = 1920;
     public static final int HEIGHT = 1080;
+
+    private static final float glowHalfDistance = 0.1f;
 
     //Render Objects
     private List<Drawable> objectsInScene = new ArrayList<>();
@@ -42,7 +42,7 @@ public class Renderer extends PApplet {
     private List<PImage> frameCaps = new LinkedList<>();
     private MovieConverter movieConverter = new MovieConverter();
     private boolean completedAllRenders = false;
-    private Color backgroundColor = Color.BLACK;
+    private Color backgroundColor = Color.WHITE;
 
     @Override
     public void settings() {
@@ -65,19 +65,19 @@ public class Renderer extends PApplet {
         objectsInScene.add(new Sphere(
                 new Vector3f(-8, 0, -8),
                 new Color(0f, 0f, 1f),
-                5f, .05f, .5f));
+                5f, .1f, .5f));
         objectsInScene.add(new Sphere(
                 new Vector3f(8, 0, 8),
                 new Color(0f, 1f, 0f),
-                5f, .05f, .5f));
+                5f, .1f, .5f));
         objectsInScene.add(new Sphere(
                 new Vector3f(-8, 0, 8),
                 new Color(1f, 0f, 0f),
-                5f, .05f, .5f));
+                5f, .1f, .5f));
         objectsInScene.add(new Sphere(
                 new Vector3f(8, 0, -8),
                 new Color(1f, 1f, 1f),
-                5f, .05f, .5f));
+                5f, .1f, .5f));
         objectsInScene.add(new Sphere(
                 new Vector3f(0, -6, 0),
                 new Color(.2f, .2f, .2f),
@@ -88,11 +88,13 @@ public class Renderer extends PApplet {
                 .8f,
                 30,
                 rotationPeriod,
-                0.01f,
-                new Color(0, 255, 255),
+                0.000001f,
+                new Color(0, 0, 255),
                 new Color(100, 0, 100),
-                Color.white,
-                1f));
+//                Color.WHITE,
+//                Color.BLACK,
+                Color.BLACK,
+                .1f));
 
         camera = new Camera(
                 new Vector3f(0, 0, 3),
@@ -104,18 +106,18 @@ public class Renderer extends PApplet {
                 new Vector3f(0, 30, 0),
                 Color.white,
                 1, 1f, .8f));
-        lightSources.add(new Sphere(
-                new Vector3f(0, 30, 10),
-                new Color(255, 200, 200),
-                1, 1f, .8f));
-        lightSources.add(new Sphere(
-                new Vector3f(10 * sin(2 * PI / 3), 30, 10 * cos(2 * PI / 3)),
-                new Color(200, 255, 200),
-                1, 1f, .8f));
-        lightSources.add(new Sphere(
-                new Vector3f(10 * sin(4 * PI / 3), 30, 10 * cos(4 * PI / 3)),
-                new Color(200, 200, 255),
-                1, 1f, .8f));
+//        lightSources.add(new Sphere(
+//                new Vector3f(0, 30, 10),
+//                new Color(255, 200, 200),
+//                1, 1f, .8f));
+//        lightSources.add(new Sphere(
+//                new Vector3f(10 * sin(2 * PI / 3), 30, 10 * cos(2 * PI / 3)),
+//                new Color(200, 255, 200),
+//                1, 1f, .8f));
+//        lightSources.add(new Sphere(
+//                new Vector3f(10 * sin(4 * PI / 3), 30, 10 * cos(4 * PI / 3)),
+//                new Color(200, 200, 255),
+//                1, 1f, .8f));
         objectsInScene.addAll(lightSources);
     }
 
@@ -129,7 +131,7 @@ public class Renderer extends PApplet {
         cameraPos.normalize();
         camera.setDirection(cameraPos);
 
-        if (timeIndex == targetFrames) {
+        if (timeIndex >= targetFrames) {
             if (!completedAllRenders) {
                 movieConverter.convertFramesToMovie(width, height);
                 completedAllRenders = true;
@@ -194,7 +196,7 @@ public class Renderer extends PApplet {
                 camera.getPixelPosition(x, y, position);
                 camera.getPixelDirection(x, y, direction);
 
-                pixels[x + y * width] = rayMarch(direction, position, 50, .01f, backgroundColor, lightBounces).getRGB();
+                pixels[x + y * width] = rayMarch(direction, position, 50, .0008f, backgroundColor, lightBounces).getRGB();
             }
             if (shouldRestartCurrentFrame) break;
         }
@@ -206,19 +208,23 @@ public class Renderer extends PApplet {
         int numThreads = (int) Math.ceil(height / (float) SCANNING_INDEX_CAP);
         List<Runnable> drawTasks = new ArrayList<>();
         for (int y = scanningIndexY; y < height; y += SCANNING_INDEX_CAP) {
-            final int threadY = y;
-            drawTasks.add(() -> {
-                Vector3f position = new Vector3f();
-                Vector3f direction = new Vector3f();
+            try {
+                final int threadY = y;
+                drawTasks.add(() -> {
+                    Vector3f position = new Vector3f();
+                    Vector3f direction = new Vector3f();
 
-                for (int x = scanningIndexX; x < width; x += SCANNING_INDEX_CAP) {
-                    if (shouldRestartCurrentFrame) break;
-                    camera.getPixelPosition(x, threadY, position);
-                    camera.getPixelDirection(x, threadY, direction);
+                    for (int x = scanningIndexX; x < width; x += SCANNING_INDEX_CAP) {
+                        if (shouldRestartCurrentFrame) break;
+                        camera.getPixelPosition(x, threadY, position);
+                        camera.getPixelDirection(x, threadY, direction);
 
-                    pixels[x + threadY * width] = rayMarch(direction, position, 50, .01f, backgroundColor, lightBounces).getRGB();
-                }
-            });
+                        pixels[x + threadY * width] = rayMarch(direction, position, 50, .0003f, backgroundColor, lightBounces).getRGB();
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         Collection<Future<?>> tasks = new ArrayList<>();
@@ -246,7 +252,7 @@ public class Renderer extends PApplet {
             totalMilliseconds += time;
         long averageMSPerFrame = totalMilliseconds / frameTimings.size();
 
-        int secondsToComplete = (int) ((targetFrames - frameCaps.size()) * averageMSPerFrame / 1000);
+        int secondsToComplete = (int) ((targetFrames - timeIndex) * averageMSPerFrame / 1000);
 
         int completionHours, completionMinutes, completionSeconds;
         completionHours = secondsToComplete / 60 / 60;
@@ -313,13 +319,13 @@ public class Renderer extends PApplet {
 
             if (closestInfo.distance < distanceBuffer) {
                 Vector3f normal = closestDrawable.getNormalAtSurface(timeIndex, position);
-
                 float[] rawColor = closestDrawable.getColor(timeIndex, position).getColorComponents(null);
+
+                float ambient = .5f - constrain((stepNum - 10) / 80f, 0, 1f)/2.25f;
+                //System.out.printf("ambient: %f steps: %d\n", ambient, stepNum);
                 float[] lightColor = getLightColor(position, normal, closestInfo.index, distanceBuffer, numBounces - 1).getColorComponents(null);
                 float[] reflectionColor = getReflectionColor(position, normal, direction, closestInfo.index, distanceBuffer, numBounces - 1, backgroundColor).getColorComponents(null);
 
-                float ambient = .25f - Math.min(stepNum, 20) / 80f;
-                //float ambient = .2f;
                 float reflectivity = closestDrawable.getReflectivity();
 
                 for (int i = 0; i < rawColor.length; i++) {
@@ -332,23 +338,26 @@ public class Renderer extends PApplet {
                 color = new Color(rawColor[0], rawColor[1], rawColor[2]);
             } else {
                 direction.normalize();
-                direction.scale(closestInfo.distance);
+                direction.scale(closestInfo.distance * .8f);
                 position.add(direction);
             }
 
-            cumulativeGlowIntensity += closestDrawable.getBaseGlowIntensity();
+            float intensityWithDecay = (float) (closestDrawable.getBaseGlowIntensity() * Math.pow(.5f, closestInfo.distance / glowHalfDistance));
+            cumulativeGlowIntensity += intensityWithDecay;
             if (glowColor == null) {
                 glowColor = closestDrawable.getGlowColor();
             } else {
-                float glowEffectScalar = closestDrawable.getBaseGlowIntensity() / cumulativeGlowIntensity;
+                float glowEffectScalar = intensityWithDecay / cumulativeGlowIntensity;
                 glowColor = interpolate(glowColor, closestDrawable.getGlowColor(), glowEffectScalar);
             }
+
 
             stepNum++;
         }
 
-        if(glowColor != null) {
-            float bloomIntensity = constrain(cumulativeGlowIntensity / 80f, 0f, 1f);
+        if (glowColor != null) {
+            //cumulativeGlowIntensity += (random.nextFloat() * 2 - 1);
+            float bloomIntensity = constrain(cumulativeGlowIntensity / 60, 0f, 1f);
             //System.out.printf("totalGlow: %f intensity: %f steps: %d\n", cumulativeGlowIntensity, bloomIntensity, stepNum);
             color = interpolate(color, glowColor, bloomIntensity);
         }

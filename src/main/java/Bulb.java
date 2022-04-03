@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static processing.core.PApplet.*;
 
-public class Bulb implements Drawable{
+public class Bulb implements Drawable {
     private final Vector3f position;
     private final float reflectivity;
     private final int steps;
@@ -29,65 +29,67 @@ public class Bulb implements Drawable{
         this.glowIntensity = glowIntensity;
     }
 
-    public float distanceToSurface(int timeIndex, Vector3f point){
+    public float distanceToSurface(int timeIndex, Vector3f point) {
         float[] rdr = iterate(timeIndex, point);
-        return 0.5f* log(rdr[0])*rdr[0]/rdr[1];
+        return 0.5f * log(rdr[0]) * rdr[0] / rdr[1];
     }
 
     //Iterates the given point for the given time index. If it converges, it is part of the fractal. It is outside if not.
-    private float[] iterate(int timeIndex, Vector3f point){
-        float power = 3.0f+4.0f*(sin(timeIndex*period))+1.0f;
-        Vector3f z = new Vector3f(point);
+    private float[] iterate(int timeIndex, Vector3f point) {
+        float power = 5.0f * (sin(timeIndex * period) + PI/16f) + 7.0f;
+        //float power = 8;
 
+        Vector3f z = new Vector3f(point);
         float dr = 1.0f;
         float r = 0.0f;
         int i;
-        for (i = 0; i < steps ; i++) {
+        for (i = 0; i < steps; i++) {
             r = z.length();
-            if (r>DISTANCE) break;
+            if (r > DISTANCE) break;
 
             // convert to polar coordinates
-            float theta = acos(z.z/r);
-            float phi = atan2(z.y,z.x);
-            dr =  pow( r, power-1.0f)*power*dr + 1.0f;
+            float theta = acos(z.z / r);
+            float phi = atan2(z.y, z.x);
+            dr = pow(r, power - 1.0f) * power * dr + 1.0f;
 
             // scale and rotate the point
-            float zr = pow( r,power);
-            theta = theta*power;
-            phi = phi*power;
+            float zr = pow(r, power);
+            theta = theta * power;
+            phi = phi * power;
 
             // convert back to cartesian coordinates
-            z.set(sin(theta)* cos(phi), sin(phi)* sin(theta), cos(theta));
+            z.set(sin(theta) * cos(phi), sin(phi) * sin(theta), cos(theta));
             z.scale(zr);
             z.add(point);
         }
-        return new float[]{r, dr, (float)i};
+        return new float[]{r, dr, (float) i};
     }
 
     @Override
     public Vector3f getNormalAtSurface(int timeIndex, Vector3f position) {
         Vector3f normal = new Vector3f();
 
-        normal.set(position.x + granularity,position.y, position.z);
+        normal.set(position.x + granularity, position.y, position.z);
         float xPlus = distanceToSurface(timeIndex, normal);
-        normal.set(position.x - granularity,position.y, position.z);
+        normal.set(position.x - granularity, position.y, position.z);
         float xMinus = distanceToSurface(timeIndex, normal);
 
-        normal.set(position.x,position.y + granularity, position.z);
+        normal.set(position.x, position.y + granularity, position.z);
         float yPlus = distanceToSurface(timeIndex, normal);
-        normal.set(position.x,position.y - granularity, position.z);
+        normal.set(position.x, position.y - granularity, position.z);
         float yMinus = distanceToSurface(timeIndex, normal);
 
-        normal.set(position.x,position.y, position.z + granularity);
+        normal.set(position.x, position.y, position.z + granularity);
         float zPlus = distanceToSurface(timeIndex, normal);
-        normal.set(position.x,position.y, position.z - granularity);
+        normal.set(position.x, position.y, position.z - granularity);
         float zMinus = distanceToSurface(timeIndex, normal);
 
-        normal.set(xPlus - xMinus, yPlus - yMinus,zPlus - zMinus);
+        normal.set(xPlus - xMinus, yPlus - yMinus, zPlus - zMinus);
         normal.normalize();
 
         return normal;
     }
+
 
     public Vector3f getPosition() {
         return position;
@@ -97,7 +99,8 @@ public class Bulb implements Drawable{
         float[] rdr = iterate(timeIndex, position);
 
         //Some magic numbers that look good
-        float scale = constrain(rdr[0]/5, 0, 1);
+        float scale = constrain(rdr[0] / 5, 0, 1);
+        //float scale = constrain(rdr[2] * 2 / steps, 0, 1);
 
         //System.out.println(Arrays.toString(rdr));
 
