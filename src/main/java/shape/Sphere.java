@@ -1,7 +1,11 @@
+package shape;
+
+import renderer.Drawable;
+
 import javax.vecmath.Vector3f;
 import java.awt.*;
 
-public class Sphere implements Drawable{
+public class Sphere implements Drawable {
     private final Vector3f position;
     private final Color color;
     private final float radius;
@@ -23,7 +27,7 @@ public class Sphere implements Drawable{
     }
 
     public float distanceToSurface(int timeIndex, Vector3f point){
-        return distanceToCenter(point) - radius;
+        return Math.abs(radius - distanceToCenter(point));
     }
 
     public Vector3f getPosition() {
@@ -35,10 +39,15 @@ public class Sphere implements Drawable{
     }
 
     @Override
-    public Vector3f getNormalAtSurface(int timeIndex, Vector3f position) {
+    public Vector3f getNormalAtSurface(int timeIndex, Vector3f position, Vector3f origin) {
         Vector3f normal = new Vector3f(position);
         normal.sub(this.position);
         normal.normalize();
+
+        if(distanceToCenter(origin) < radius){
+            normal.negate();
+        }
+
         return normal;
     }
 

@@ -51,6 +51,6 @@ public class MovieConverter {
     }
 
     public static void main(String[] args){
-        new MovieConverter().convertFramesToMovie(Renderer.WIDTH, Renderer.HEIGHT);
+        new MovieConverter().convertFramesToMovie(500, 500);
     }
 }

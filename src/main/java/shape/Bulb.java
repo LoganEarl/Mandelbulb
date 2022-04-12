@@ -1,8 +1,11 @@
+package shape;
+
+import renderer.Drawable;
+
 import javax.vecmath.Vector3f;
 import java.awt.*;
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicReference;
 
+import static math.Utils.interpolate;
 import static processing.core.PApplet.*;
 
 public class Bulb implements Drawable {
@@ -30,7 +33,10 @@ public class Bulb implements Drawable {
     }
 
     public float distanceToSurface(int timeIndex, Vector3f point) {
-        float[] rdr = iterate(timeIndex, point);
+        Vector3f p = new Vector3f(point);
+        p.sub(position);
+
+        float[] rdr = iterate(timeIndex, p);
         return 0.5f * log(rdr[0]) * rdr[0] / rdr[1];
     }
 
@@ -66,7 +72,7 @@ public class Bulb implements Drawable {
     }
 
     @Override
-    public Vector3f getNormalAtSurface(int timeIndex, Vector3f position) {
+    public Vector3f getNormalAtSurface(int timeIndex, Vector3f position, Vector3f origin) {
         Vector3f normal = new Vector3f();
 
         normal.set(position.x + granularity, position.y, position.z);
@@ -104,7 +110,7 @@ public class Bulb implements Drawable {
 
         //System.out.println(Arrays.toString(rdr));
 
-        return Renderer.interpolate(startColor, endColor, scale);
+        return interpolate(startColor, endColor, scale);
     }
 
     public float getReflectivity() {
