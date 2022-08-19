@@ -2,7 +2,7 @@
 
 This is a project my little brother and I put together over a weekend. It is inspired by a [video](https://youtu.be/Cp5WWtMoeKg) we watched on ray marching, courtesy of Sebastian Lague. 
 We used the following:
-* Java 11
+* Java 11 (9 on MAC)
 * Some jars we ripped out of the [Processing](https://processing.org/) IDE for the graphics
 * [JavaCV](https://github.com/bytedeco/javacv) to generate the complete mp4 from the rendered frames
 * Maven for dependency management
