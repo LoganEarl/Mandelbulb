@@ -9,6 +9,7 @@ import shape.Sphere;
 import javax.vecmath.Vector3f;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class InfiniteBulb extends Scene implements FrameCalculator.FrameCompleteCallback {
@@ -41,24 +42,11 @@ public class InfiniteBulb extends Scene implements FrameCalculator.FrameComplete
                         (float) Math.PI * 2f,
                         0.001f,
                         Color.BLACK,
-                        Color.GRAY,
                         Color.WHITE,
-                        .05f
+                        Color.WHITE,
+                        0f
                 ))
-//                new RepeatingShape(10f,
-//                        new Sphere(
-//                                new Vector3f(0f, 0f, 0f),
-//                                Color.GREEN,
-//                                1f, 0.05f, 0.1f
-//                        )
-//                ),
-//                new Sphere(
-//                        new Vector3f(0f, 0f, 0f),
-//                        Color.WHITE,
-//                        50f, 0.00f, 0f
-//                )
         ));
-        drawables.addAll(lights);
 
         Camera camera = new Camera(
                 new Vector3f(0, 0, 4),
@@ -67,11 +55,17 @@ public class InfiniteBulb extends Scene implements FrameCalculator.FrameComplete
                 .00f, width, height);
 
         RayEngine rayEngine = RayMarchEngine.defaultEngineSettings(drawables, lights)
-                .recursiveSteps(7)
-                .maxRenderDistance(2000f)
+                .backgroundColor(new Color(180,180,180))
+                .recursiveSteps(1)
+                .glowHalfDistance(.4f)
+                .maxRenderDistance(3000f)
+                .minAmbientLevel(0)
+                .maxAmbientLevel(1f)
+                .minAmbientSteps(0)
+                .maxAmbientSteps(100)
                 .build();
 
-        background(0);
+        background(255);
         loadPixels();
         //frameCalculator = SerialScatteredFrameCalculator.builder()
         frameCalculator = ParallelScatteredFrameCalculator.builder()
@@ -95,6 +89,7 @@ public class InfiniteBulb extends Scene implements FrameCalculator.FrameComplete
     public void onFrameComplete(int[] pixels) {
         saveFrame(timeIndex);
         frameCalculator.printRenderStats(timeIndex, TARGET_TIME_INDEX);
+        if(timeIndex < TARGET_TIME_INDEX) timeIndex++;
     }
 
     public static void main(String[] args){

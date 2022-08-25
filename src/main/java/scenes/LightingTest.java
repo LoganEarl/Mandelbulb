@@ -55,14 +55,12 @@ public class LightingTest extends Scene implements FrameCalculator.FrameComplete
                 new Vector3f(0, 1, 0),
                 .00f, width, height);
 
-        RayEngine rayEngine = RayMarchEngine.builder()
-                .backgroundColor(Color.BLACK)
+        RayEngine rayEngine = RayMarchEngine.defaultEngineSettings(drawables, lights)
+                .backgroundColor(Color.WHITE)
                 .collisionDistance(.0003f)
                 .glowHalfDistance(0.1f)
                 .maxRenderDistance(100f)
-                .recursiveSteps(2)
-                .lightSources(lights)
-                .objectsInScene(drawables)
+                .recursiveSteps(6)
                 .build();
 
         loadPixels();
@@ -87,6 +85,9 @@ public class LightingTest extends Scene implements FrameCalculator.FrameComplete
         //we can ignore the pixel array here. We fed it the reference to our internal one which it is making modifications to
         saveFrame(timeIndex);
         frameCalculator.printRenderStats(timeIndex, TARGET_TIME_INDEX);
+
+
+
         timeIndex++;
         timeIndex = timeIndex % TARGET_TIME_INDEX;
     }

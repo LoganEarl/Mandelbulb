@@ -7,6 +7,10 @@ public class Utils {
         return amt < low ? low : (Math.min(amt, high));
     }
 
+    public static int constrainInt(int amt, int low, int high) {
+        return amt < low ? low : (Math.min(amt, high));
+    }
+
     public static float dist(float x1, float y1, float z1, float x2, float y2, float z2) {
         return sqrt(sq(x2 - x1) + sq(y2 - y1) + sq(z2 - z1));
     }

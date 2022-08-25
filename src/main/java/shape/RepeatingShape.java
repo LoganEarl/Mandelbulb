@@ -16,7 +16,7 @@ public class RepeatingShape implements Drawable {
 
     private static float modByDomain(float in, float domain) {
         float out = (in + domain/2) % domain;
-        if(out < 0) out += domain;
+        while(out < 0) out += domain;
         out -= domain/2;
         return out;
     }

@@ -19,6 +19,10 @@ public class RayMarchEngine implements RayEngine {
     private int recursiveSteps;
     private float maxRenderDistance;
     private float glowHalfDistance;
+    private float minAmbientLevel;
+    private float maxAmbientLevel;
+    private int minAmbientSteps;
+    private int maxAmbientSteps;
 
     public static RayMarchEngine.RayMarchEngineBuilder defaultEngineSettings(List<Drawable> drawables, List<Drawable> lights){
         return RayMarchEngine.builder()
@@ -28,6 +32,10 @@ public class RayMarchEngine implements RayEngine {
                 .maxRenderDistance(100f)
                 .recursiveSteps(2)
                 .lightSources(lights)
+                .minAmbientLevel(0)
+                .maxAmbientLevel(.5f)
+                .minAmbientSteps(0)
+                .maxAmbientSteps(20)
                 .objectsInScene(drawables);
     }
 
@@ -51,8 +59,10 @@ public class RayMarchEngine implements RayEngine {
                 Vector3f normal = closestDrawable.getNormalAtSurface(timeIndex, position, start);
                 float[] rawColor = closestDrawable.getColor(timeIndex, position).getColorComponents(null);
 
-                float ambient = .5f - constrain((stepNum - 10) / 80f, 0, 1f)/2.25f;
-                //System.out.printf("ambient: %f steps: %d\n", ambient, stepNum);
+                int ambientSteps = constrainInt(stepNum, minAmbientSteps, maxAmbientSteps);
+                float ambientPercentage = (ambientSteps - minAmbientSteps)/(maxAmbientSteps - (float)minAmbientSteps);
+                float ambient = ambientPercentage * (maxAmbientLevel - minAmbientLevel) + minAmbientLevel;
+
                 float[] lightColor = getLightColor(position, normal, closestInfo.index, timeIndex, remainingRecursiveSteps - 1).getColorComponents(null);
                 float[] reflectionColor = getReflectionColor(position, normal, direction, timeIndex, remainingRecursiveSteps - 1).getColorComponents(null);
 
@@ -68,7 +78,7 @@ public class RayMarchEngine implements RayEngine {
                 color = new Color(rawColor[0], rawColor[1], rawColor[2]);
             } else {
                 direction.normalize();
-                direction.scale(closestInfo.distance);
+                direction.scale(closestInfo.distance * .9f);
                 position.add(direction);
             }
 
