@@ -8,6 +8,7 @@ import shape.Sphere;
 import javax.vecmath.Vector3f;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class LightingTest extends Scene implements FrameCalculator.FrameCompleteCallback {
@@ -24,12 +25,12 @@ public class LightingTest extends Scene implements FrameCalculator.FrameComplete
 
     @Override
     public void setup() {
-        List<Drawable> lights = List.of(new Sphere(
+        List<Drawable> lights = Arrays.asList(new Sphere(
                 new Vector3f(30, 30, 0),
                 Color.white,
                 1, 1f, .8f));
 
-        List<Drawable> drawables = new ArrayList<>(List.of(
+        List<Drawable> drawables = new ArrayList<>(Arrays.asList(
                 new Sphere(
                         new Vector3f(0f, 2f, 0f),
                         Color.BLUE,

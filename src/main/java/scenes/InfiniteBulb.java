@@ -25,15 +25,15 @@ public class InfiniteBulb extends Scene implements FrameCalculator.FrameComplete
 
     @Override
     public void setup() {
-        List<Drawable> lights = List.of(
+        List<Drawable> lights = Arrays.asList(
                 new Sphere(
-                        new Vector3f(0, 4, 0),
+                        new Vector3f(0, 4f, 0),
                         Color.white,
                         .1f, 1f, .8f
                 )
         );
 
-        List<Drawable> drawables = new ArrayList<>(List.of(
+        List<Drawable> drawables = new ArrayList<>(Arrays.asList(
                 new RepeatingShape(10f, new Bulb(
                         new Vector3f(0f, 0f, 0f),
                         1f,
