@@ -1,26 +1,37 @@
 package shape;
 
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import utils.Utils;
+import utils.Vector3;
 import renderer.Drawable;
 
-import javax.vecmath.Vector3f;
+import javax.vecmath.Vector3d;
 import java.awt.*;
 
-import static math.Utils.interpolate;
+import static utils.ColorUtils.interpolate;
 import static processing.core.PApplet.*;
 
+@NoArgsConstructor
 public class Bulb implements Drawable {
-    private final Vector3f position;
-    private final float reflectivity;
-    private final int steps;
     private static final float DISTANCE = 1.5f;
-    private final float period;
-    private final float granularity;
-    private final Color startColor;
-    private final Color endColor;
-    private final Color glowColor;
-    private final float glowIntensity;
 
-    public Bulb(Vector3f position, float reflectivity, int steps, float period, float granularity, Color startColor, Color endColor, Color glowColor, float glowIntensity) {
+
+    private Vector3 position;
+    private float pitchRadians;
+    private float yawRadians;
+    private float rollRadians;
+    private float reflectivity;
+    private int steps;
+    private float period;
+    private float granularity;
+    private int startColor;
+    private int endColor;
+    private int glowColor;
+    private float glowIntensity;
+
+    @Builder()
+    public Bulb(Vector3 position, float reflectivity, int steps, float period, float granularity, int startColor, int endColor, int glowColor, float glowIntensity, float pitchRadians, float yawRadians, float rollRadians) {
         this.position = position;
         this.reflectivity = reflectivity;
         this.steps = steps;
@@ -30,50 +41,52 @@ public class Bulb implements Drawable {
         this.endColor = endColor;
         this.glowColor = glowColor;
         this.glowIntensity = glowIntensity;
+        this.pitchRadians = pitchRadians;
+        this.yawRadians = yawRadians;
+        this.rollRadians = rollRadians;
     }
 
-    public float distanceToSurface(int timeIndex, Vector3f point) {
-        Vector3f p = new Vector3f(point);
-        p.sub(position);
+    public float distanceToSurface(int timeIndex, Vector3 point) {
+        Vector3 p = new Vector3(point).subV(position);
 
         float[] rdr = iterate(timeIndex, p);
         return 0.5f * log(rdr[0]) * rdr[0] / rdr[1];
     }
 
     //Iterates the given point for the given time index. If it converges, it is part of the fractal. It is outside if not.
-    private float[] iterate(int timeIndex, Vector3f point) {
-        float power = 5.0f * (sin(timeIndex * period) + PI/16f) + 7.0f;
-        //float power = 8;
+    private float[] iterate(int timeIndex, Vector3 point) {
+        double power = 5.0f * (sin(timeIndex * period) + Math.PI/16) + 7.0;
 
-        Vector3f z = new Vector3f(point);
-        float dr = 1.0f;
-        float r = 0.0f;
+        Vector3d z = new Vector3d(point);
+        double dr = 1.0;
+        double r = 0.0;
         int i;
         for (i = 0; i < steps; i++) {
             r = z.length();
+            if (r == 0) r = granularity;
             if (r > DISTANCE) break;
 
             // convert to polar coordinates
-            float theta = acos(z.z / r);
-            float phi = atan2(z.y, z.x);
-            dr = pow(r, power - 1.0f) * power * dr + 1.0f;
+            double theta = Utils.fastAcos(z.z / r);
+            double phi = Math.atan2(z.y, z.x);
+            dr = Math.pow(r, power - 1.0f) * power * dr + 1.0f;
 
             // scale and rotate the point
-            float zr = pow(r, power);
+            double zr = Math.pow(r, power);
             theta = theta * power;
             phi = phi * power;
 
             // convert back to cartesian coordinates
-            z.set(sin(theta) * cos(phi), sin(phi) * sin(theta), cos(theta));
+            z.set(Math.sin(theta) * Math.cos(phi), Math.sin(phi) * Math.sin(theta), Math.cos(theta));
             z.scale(zr);
-            z.add(point);
+            z.add(new Vector3d(point));
         }
-        return new float[]{r, dr, (float) i};
+        return new float[]{(float)r, (float)dr, (float) i};
     }
 
     @Override
-    public Vector3f getNormalAtSurface(int timeIndex, Vector3f position, Vector3f origin) {
-        Vector3f normal = new Vector3f();
+    public Vector3 getNormalAtSurface(int timeIndex, Vector3 position, Vector3 origin) {
+        Vector3 normal = new Vector3();
 
         normal.set(position.x + granularity, position.y, position.z);
         float xPlus = distanceToSurface(timeIndex, normal);
@@ -90,25 +103,20 @@ public class Bulb implements Drawable {
         normal.set(position.x, position.y, position.z - granularity);
         float zMinus = distanceToSurface(timeIndex, normal);
 
-        normal.set(xPlus - xMinus, yPlus - yMinus, zPlus - zMinus);
-        normal.normalize();
-
-        return normal;
+        return normal.setV(xPlus - xMinus, yPlus - yMinus, zPlus - zMinus)
+                        .normalizeV();
     }
 
 
-    public Vector3f getPosition() {
+    public Vector3 getPosition() {
         return position;
     }
 
-    public Color getColor(int timeIndex, Vector3f position) {
+    public int getColor(int timeIndex, Vector3 position) {
         float[] rdr = iterate(timeIndex, position);
 
-        //Some magic numbers that look good
-        float scale = constrain(rdr[0] / 5, 0, 1);
-        //float scale = constrain(rdr[2] * 2 / steps, 0, 1);
-
-        //System.out.println(Arrays.toString(rdr));
+//        Some magic numbers that look good
+        float scale = constrain(rdr[2] * 2 / steps, 0, 1);
 
         return interpolate(startColor, endColor, scale);
     }
@@ -123,7 +131,14 @@ public class Bulb implements Drawable {
     }
 
     @Override
-    public Color getGlowColor() {
+    public int getGlowColor() {
         return glowColor;
     }
+
+    @Override
+    public DrawableType getDrawableType() {
+        return DrawableType.BULB;
+    }
+
+
 }

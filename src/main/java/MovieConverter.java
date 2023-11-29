@@ -17,7 +17,7 @@ public class MovieConverter {
             new File("./movie/").mkdir();
 
             OpenCVFrameConverter.ToIplImage grabberConverter = new OpenCVFrameConverter.ToIplImage();
-            FFmpegFrameRecorder recorder = new FFmpegFrameRecorder("./movie/mandelbulb.mp4", width, height);
+            FFmpegFrameRecorder recorder = new FFmpegFrameRecorder("./movie/lightingTest.mp4", width, height);
 
             File screenshotDirectory = new File("./frames");
             File[] screenshots = screenshotDirectory.listFiles();
@@ -25,7 +25,7 @@ public class MovieConverter {
             if (screenshots != null) {
                 List<String> fileNames = Arrays.stream(screenshots)
                         .map(File::getAbsolutePath)
-                        .filter(name-> name.contains("frame"))
+                        .filter(name-> name.contains("LightingTest"))
                         .sorted()
                         .collect(Collectors.toList());
 
@@ -51,6 +51,6 @@ public class MovieConverter {
     }
 
     public static void main(String[] args){
-        new MovieConverter().convertFramesToMovie(500, 500);
+        new MovieConverter().convertFramesToMovie(1920, 1080);
     }
 }

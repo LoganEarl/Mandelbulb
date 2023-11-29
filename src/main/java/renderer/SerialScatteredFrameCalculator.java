@@ -1,8 +1,9 @@
 package renderer;
 
 import lombok.Builder;
+import utils.Vector3;
 
-import javax.vecmath.Vector3f;
+import java.awt.*;
 
 public class SerialScatteredFrameCalculator extends FrameCalculator {
     private static final int SCANNING_INDEX_CAP = 10;
@@ -20,8 +21,8 @@ public class SerialScatteredFrameCalculator extends FrameCalculator {
 
     @Override
     public void update(int timeIndex) {
-        Vector3f position = new Vector3f();
-        Vector3f direction = new Vector3f();
+        Vector3 position = new Vector3();
+        Vector3 direction = new Vector3();
 
         for (int y = scanningIndexY; y < getHeight(); y += SCANNING_INDEX_CAP) {
             for (int x = scanningIndexX; x < getWidth(); x += SCANNING_INDEX_CAP) {
@@ -29,7 +30,7 @@ public class SerialScatteredFrameCalculator extends FrameCalculator {
                 getCamera().getPixelPosition(x, y, position);
                 getCamera().getPixelDirection(x, y, direction);
 
-                this.writePixel(x, y, rayEngine.calculateRay(direction, position, timeIndex).getRGB());
+                this.writePixel(x, y, rayEngine.calculateRay(direction, position, timeIndex));
             }
             if (shouldRestartCurrentFrame) {
                 shouldRestartCurrentFrame = false;
@@ -47,10 +48,12 @@ public class SerialScatteredFrameCalculator extends FrameCalculator {
         if (scanningIndexY > SCANNING_INDEX_CAP) {
             scanningIndexY = scanningIndexY % SCANNING_INDEX_CAP;
             super.markFrameComplete();
+            scanningIndexX = 0;
+            scanningIndexY = 0;
         }
     }
 
-    public void triggerFrameRestart(){
+    public void triggerFrameRestart() {
         this.shouldRestartCurrentFrame = true;
     }
 }

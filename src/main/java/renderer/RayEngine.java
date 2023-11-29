@@ -1,8 +1,11 @@
 package renderer;
 
-import javax.vecmath.Vector3f;
+import utils.Vector3;
+import settings.RayEngineSettings;
+
 import java.awt.*;
 
 public interface RayEngine {
-    Color calculateRay(Vector3f direction, Vector3f position, int timeIndex);
+    int calculateRay(Vector3 direction, Vector3 position, int timeIndex);
+    RayEngineSettings getSettings();
 }

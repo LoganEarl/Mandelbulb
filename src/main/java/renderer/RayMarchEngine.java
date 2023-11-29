@@ -1,92 +1,68 @@
 package renderer;
 
-import lombok.Builder;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.experimental.Delegate;
+import settings.RayEngineSettings;
+import utils.Utils;
+import utils.Vector3;
 
 import javax.vecmath.Vector3f;
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import static math.Utils.*;
+import static utils.ColorUtils.*;
+import static utils.Utils.*;
 
-@Builder
+@AllArgsConstructor
 public class RayMarchEngine implements RayEngine {
     private List<Drawable> objectsInScene;
     private List<Drawable> lightSources;
 
-    private float collisionDistance;
-    private Color backgroundColor;
-    private int recursiveSteps;
-    private float maxRenderDistance;
-    private float glowHalfDistance;
-    private float minAmbientLevel;
-    private float maxAmbientLevel;
-    private int minAmbientSteps;
-    private int maxAmbientSteps;
+    @Delegate
+    @Getter
+    private RayEngineSettings settings;
 
-    public static RayMarchEngine.RayMarchEngineBuilder defaultEngineSettings(List<Drawable> drawables, List<Drawable> lights){
-        return RayMarchEngine.builder()
-                .backgroundColor(Color.BLACK)
-                .collisionDistance(.0003f)
-                .glowHalfDistance(0.1f)
-                .maxRenderDistance(100f)
-                .recursiveSteps(2)
-                .lightSources(lights)
-                .minAmbientLevel(0)
-                .maxAmbientLevel(.5f)
-                .minAmbientSteps(0)
-                .maxAmbientSteps(20)
-                .objectsInScene(drawables);
+    public int calculateRay(Vector3 direction, Vector3 position, int timeIndex) {
+        return rayMarch(direction, position, timeIndex, getRecursiveSteps());
     }
 
-    public Color calculateRay(Vector3f direction, Vector3f position, int timeIndex){
-        return rayMarch(direction, position, timeIndex, recursiveSteps);
-    }
-
-    private Color rayMarch(Vector3f direction, Vector3f position, int timeIndex, int remainingRecursiveSteps) {
-        Color color = backgroundColor;
-        Vector3f start = new Vector3f(position);
+    private int rayMarch(Vector3 direction, Vector3 position, int timeIndex, int remainingRecursiveSteps) {
+        int color = getBackgroundColor();
+        Vector3 start = new Vector3(position);
         int stepNum = 0;
         float cumulativeGlowIntensity = 0;
-        Color glowColor = null;
+        Integer glowColor = null;
 
         while (dist(start.x, start.y, start.z,
-                position.x, position.y, position.z) < maxRenderDistance && color == backgroundColor) {
+                position.x, position.y, position.z) < getMaxRenderDistance() && color == getBackgroundColor()) {
             DistanceCalculation closestInfo = closestDistanceTo(position, timeIndex);
             Drawable closestDrawable = objectsInScene.get(closestInfo.index);
 
-            if (closestInfo.distance < collisionDistance) {
-                Vector3f normal = closestDrawable.getNormalAtSurface(timeIndex, position, start);
-                float[] rawColor = closestDrawable.getColor(timeIndex, position).getColorComponents(null);
+            if (closestInfo.distance < getCollisionDistance(position)) {
+                Vector3 normal = closestDrawable.getNormalAtSurface(timeIndex, position, start);
+                int rawColor = closestDrawable.getColor(timeIndex, position);
 
-                int ambientSteps = constrainInt(stepNum, minAmbientSteps, maxAmbientSteps);
-                float ambientPercentage = (ambientSteps - minAmbientSteps)/(maxAmbientSteps - (float)minAmbientSteps);
-                float ambient = ambientPercentage * (maxAmbientLevel - minAmbientLevel) + minAmbientLevel;
 
-                float[] lightColor = getLightColor(position, normal, closestInfo.index, timeIndex, remainingRecursiveSteps - 1).getColorComponents(null);
-                float[] reflectionColor = getReflectionColor(position, normal, direction, timeIndex, remainingRecursiveSteps - 1).getColorComponents(null);
+                int lightColor = getLightColor(position, direction, normal, closestInfo.index, timeIndex, remainingRecursiveSteps - 1);
+                int reflectionColor = getReflectionColor(position, normal, direction, timeIndex, remainingRecursiveSteps - 1);
 
                 float reflectivity = closestDrawable.getReflectivity();
+                float ambient = traditionalAmbientModel(stepNum);
 
-                for (int i = 0; i < rawColor.length; i++) {
-                    rawColor[i] = rawColor[i] * reflectivity + reflectionColor[i] * (1 - reflectivity);
-                    rawColor[i] = rawColor[i] * lightColor[i] + (ambient * rawColor[i]);
-                    if (rawColor[i] < 0) rawColor[i] = 0;
-                    if (rawColor[i] > 1) rawColor[i] = 1;
-                }
-
-                color = new Color(rawColor[0], rawColor[1], rawColor[2]);
+                color = applyColorModel(rawColor, reflectionColor, lightColor, reflectivity, ambient);
             } else {
                 direction.normalize();
                 direction.scale(closestInfo.distance * .9f);
                 position.add(direction);
             }
 
-            float intensityWithDecay = (float) (closestDrawable.getBaseGlowIntensity() * Math.pow(.5f, closestInfo.distance / glowHalfDistance));
+            float intensityWithDecay = (float) (closestDrawable.getBaseGlowIntensity() *
+                    Math.pow(.5f, closestInfo.distance / getGlowHalfDistance()));
             cumulativeGlowIntensity += intensityWithDecay;
             if (glowColor == null) {
                 glowColor = closestDrawable.getGlowColor();
-            } else if(cumulativeGlowIntensity > 0) {
+            } else if (cumulativeGlowIntensity > 0) {
                 float glowEffectScalar = intensityWithDecay / cumulativeGlowIntensity;
                 glowColor = interpolate(glowColor, closestDrawable.getGlowColor(), glowEffectScalar);
             }
@@ -105,29 +81,89 @@ public class RayMarchEngine implements RayEngine {
         return color;
     }
 
-    private Color getReflectionColor(Vector3f position, Vector3f normal, Vector3f incomingDirection, int timeIndex, int remainingRecursiveSteps) {
+    private float sinusoidalAmbientModel(int stepNum) {
+        int minAmbientSteps = getMinAmbientSteps();
+        int maxAmbientSteps = getMaxAmbientSteps();
+        float maxAmbientLevel = getMaxAmbientLevel();
+        float minAmbientLevel = getMinAmbientLevel();
+        int ambientRange = maxAmbientSteps - minAmbientSteps;
+        float percentage = (float) ((Math.sin((((stepNum - minAmbientSteps) - ambientRange / 2f) * Math.PI) / ambientRange)) / 2f + .5);
+        return percentage * (maxAmbientLevel - minAmbientLevel) + minAmbientLevel;
+    }
+
+    private float piecewiseLinearAmbientModel(int stepNum) {
+        int minAmbientSteps = getMinAmbientSteps();
+        int maxAmbientSteps = getMaxAmbientSteps();
+        float maxAmbientLevel = getMaxAmbientLevel();
+        float minAmbientLevel = getMinAmbientLevel();
+        int ambientRange = maxAmbientSteps - minAmbientSteps;
+        int numWraps = (stepNum - minAmbientSteps) / ambientRange;
+        int steps = (stepNum - minAmbientSteps) % ambientRange + minAmbientSteps;
+        int min = numWraps % 2 == 1 ? maxAmbientSteps : minAmbientSteps;
+        int max = numWraps % 2 == 1 ? minAmbientSteps : maxAmbientSteps;
+        float ambientPercentage = (steps - min) / (max - (float) min);
+        return ambientPercentage * (maxAmbientLevel - minAmbientLevel) + minAmbientLevel;
+    }
+
+    private float traditionalAmbientModel(int stepNum) {
+        int minAmbientSteps = getMinAmbientSteps();
+        int maxAmbientSteps = getMaxAmbientSteps();
+        float maxAmbientLevel = getMaxAmbientLevel();
+        float minAmbientLevel = getMinAmbientLevel();
+        int ambientSteps = constrainInt(stepNum, minAmbientSteps, maxAmbientSteps);
+        float ambientPercentage = (ambientSteps - minAmbientSteps) / (maxAmbientSteps - (float) minAmbientSteps);
+        return ambientPercentage * (maxAmbientLevel - minAmbientLevel) + minAmbientLevel;
+    }
+
+    private int applyColorModel(int rawColor, int reflectionColor, int lightColor, float reflectivity, float ambient) {
+        return colorF(
+                applySingleColorModel(redF(rawColor), redF(reflectionColor), redF(lightColor), reflectivity, ambient),
+                applySingleColorModel(greenF(rawColor), greenF(reflectionColor), greenF(lightColor), reflectivity, ambient),
+                applySingleColorModel(blueF(rawColor), blueF(reflectionColor), blueF(lightColor), reflectivity, ambient),
+                1
+        );
+    }
+
+    private float applySingleColorModel(float raw, float reflection, float light, float reflectivity, float ambient) {
+        float component = raw * reflectivity + reflection * (1 - reflectivity);
+        component = component * light + ((1 - ambient) * component);
+        return constrain(component, 0, 1);
+    }
+
+    private float getCollisionDistance(Vector3 position) {
+        float maxRenderDistance = getMaxRenderDistance();
+        float minCollisionDistance = getMinCollisionDistance();
+        float maxCollisionDistance = getMaxCollisionDistance();
+        //Its magic
+        float distFromOrigin = Utils.constrain(position.length(), 0, maxRenderDistance);
+        float interpolationScalar = (float) (-1 * Math.log10((-90 / maxRenderDistance) * (distFromOrigin - maxRenderDistance) + 10) + 2);
+        return (maxCollisionDistance - minCollisionDistance) * interpolationScalar + minCollisionDistance;
+//        return maxCollisionDistance;
+    }
+
+    private int getReflectionColor(Vector3 position, Vector3 normal, Vector3f incomingDirection, int timeIndex, int remainingRecursiveSteps) {
         if (remainingRecursiveSteps <= 0)
-            return backgroundColor;
+            return getBackgroundColor();
 
-        Vector3f reflectionDirection = new Vector3f(incomingDirection);
-        reflectionDirection.negate();
-        reflectionDirection.normalize();
-        Vector3f normalDiff = new Vector3f(reflectionDirection);
-        normalDiff.sub(normal);
-        reflectionDirection.set(normal);
-        reflectionDirection.sub(normalDiff);
-        reflectionDirection.normalize();
+        Vector3 reflectionDirection = new Vector3(incomingDirection)
+                .negateV()
+                .normalizeV();
+        Vector3 normalDiff = new Vector3(reflectionDirection)
+                .subV(normal);
 
-        Vector3f rayPosition = new Vector3f(position);
-        reflectionDirection.scale(collisionDistance * 30);
-        rayPosition.add(reflectionDirection);
+        reflectionDirection = reflectionDirection.setV(normal)
+                .subV(normalDiff)
+                .normalizeV();
+
+        Vector3 rayPosition = new Vector3(position)
+                .addV(reflectionDirection.scaleV(getCollisionDistance(position) * 30));
         reflectionDirection.normalize();
 
         return rayMarch(reflectionDirection, rayPosition, timeIndex, remainingRecursiveSteps - 1);
     }
 
-    private Color getLightColor(Vector3f position, Vector3f normal, int sphereIndex, int timeIndex, int remainingRecursiveSteps) {
-        List<Color> lightColors = new ArrayList<>();
+    private int getLightColor(Vector3 position, Vector3 direction, Vector3 normal, int sphereIndex, int timeIndex, int remainingRecursiveSteps) {
+        List<Integer> lightColors = new ArrayList<>();
 
         for (Drawable lightSource : lightSources) {
             if (lightSource == objectsInScene.get(sphereIndex)) {
@@ -136,61 +172,59 @@ public class RayMarchEngine implements RayEngine {
                 break;
             }
 
-            Vector3f reflectionDirection = new Vector3f(lightSource.getPosition());
-            reflectionDirection.sub(position);
-            reflectionDirection.normalize();
+            Vector3 reflectionDirection = new Vector3(lightSource.getPosition())
+                    .subV(position)
+                    .normalizeV();
 
-            Vector3f rayPosition = new Vector3f(position);
+            Vector3 rayPosition = new Vector3(position);
 
             float brightness = reflectionDirection.dot(normal);
             if (brightness < 0) brightness = 0;
+            float collisionDistance = getCollisionDistance(position);
 
-            Color lightColor;
+            int lightColor;
             if (brightness > 0) {
-                reflectionDirection.scale(collisionDistance * 30);
-                rayPosition.add(reflectionDirection);
-                reflectionDirection.normalize();
+                //Back the ray out by 3x the collision distance the way it came
+                rayPosition.add(direction.clone().normalizeV().scaleV(-1 * collisionDistance * 3));
 
-                Color result;
+                int result;
                 if (remainingRecursiveSteps > 0)
                     result = rayMarch(reflectionDirection, rayPosition, timeIndex, remainingRecursiveSteps - 1);
                 else
                     result = objectsInScene.get(sphereIndex).getColor(timeIndex, rayPosition);
 
-                if (lightSource.distanceToSurface(timeIndex, rayPosition) <= collisionDistance)
+                if (lightSource.distanceToSurface(timeIndex, rayPosition) <= getCollisionDistance(rayPosition))
                     lightColor = result;
                 else {
-                    lightColor = Color.black;
+                    lightColor = BLACK;
                     brightness = 0;
                 }
             } else
-                lightColor = Color.black;
+                lightColor = BLACK;
 
 
-            lightColors.add(new Color(
-                    (int) (lightColor.getRed() * brightness),
-                    (int) (lightColor.getGreen() * brightness),
-                    (int) (lightColor.getBlue() * brightness)));
+            lightColors.add(color(
+                    (int) (red(lightColor) * brightness),
+                    (int) (blue(lightColor) * brightness),
+                    (int) (green(lightColor) * brightness),
+                    255));
         }
         int[] components = new int[3];
-        for (Color lightColor : lightColors) {
-            components[0] += lightColor.getRed();
-            components[1] += lightColor.getGreen();
-            components[2] += lightColor.getBlue();
+        for (Integer lightColor : lightColors) {
+            components[0] += red(lightColor);
+            components[1] += green(lightColor);
+            components[2] += blue(lightColor);
         }
 
-        return new Color(
-                constrain(components[0] / 255.0f, 0, 1),
-                constrain(components[1] / 255.0f, 0, 1),
-                constrain(components[2] / 255.0f, 0, 1));
+        return color(components[0], components[1], components[2], 255);
     }
 
-    private DistanceCalculation closestDistanceTo(Vector3f position, int timeIndex) {
+    private DistanceCalculation closestDistanceTo(Vector3 position, int timeIndex) {
         float min = 100000000;
         int closestIndex = 0;
         for (int sphereIndex = 0; sphereIndex < objectsInScene.size(); sphereIndex++) {
-            float distance;
-            if ((distance = objectsInScene.get(sphereIndex).distanceToSurface(timeIndex, position)) < min) {
+            float distance = objectsInScene.get(sphereIndex).distanceToSurface(timeIndex, position);
+            if (distance < min) {
                 min = distance;
                 closestIndex = sphereIndex;
             }
