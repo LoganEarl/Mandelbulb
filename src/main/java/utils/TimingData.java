@@ -13,45 +13,46 @@ public class TimingData {
 
     public void markTimingStarted() {
         long now = System.currentTimeMillis();
-        if(firstWriteTime == 0) firstWriteTime = now;
-        if(currentFrameFirstWriteTime == 0) currentFrameFirstWriteTime = now;
+        if (firstWriteTime == 0) firstWriteTime = now;
+        if (currentFrameFirstWriteTime == 0) currentFrameFirstWriteTime = now;
     }
 
     public void markTimingComplete() {
         long timeToComplete = System.currentTimeMillis() - currentFrameFirstWriteTime;
         currentFrameFirstWriteTime = 0;
-        if(currentTimingIndex == -1) {
+        if (currentTimingIndex == -1) {
             Arrays.fill(lastTimings, timeToComplete);
             currentTimingIndex = 1;
         } else {
-            lastTimings[currentTimingIndex++] = timeToComplete;
-            currentTimingIndex = currentTimingIndex % lastTimings.length;
+            lastTimings[currentTimingIndex] = timeToComplete;
+            currentTimingIndex = (currentTimingIndex+1) % lastTimings.length;
         }
     }
 
     public void printTimingStats(int currentScanPass, int targetScanPasses) {
-        long now = System.currentTimeMillis();
-        long totalMilliseconds = now - firstWriteTime;
         long averageMsPerScanPass = Arrays.stream(lastTimings).sum() / lastTimings.length;
 
         int secondsToComplete = (int) ((targetScanPasses - currentScanPass) * averageMsPerScanPass / 1000);
+        int totalSeconds = (int) (targetScanPasses * averageMsPerScanPass / 1000);
 
-        int completionHours, completionMinutes, completionSeconds;
-        completionHours = secondsToComplete / 60 / 60;
-        completionMinutes = secondsToComplete / 60 - completionHours * 60;
-        completionSeconds = secondsToComplete - completionMinutes * 60 - completionHours * 60 * 60;
+        int remainingHours, remainingMinutes, remainingSeconds;
+        remainingHours = secondsToComplete / 60 / 60;
+        remainingMinutes = secondsToComplete / 60 - remainingHours * 60;
+        remainingSeconds = secondsToComplete - remainingMinutes * 60 - remainingHours * 60 * 60;
 
-        int totalSeconds = (int) (totalMilliseconds / 1000);
-        int elapsedHours, elapsedMinutes, elapsedSeconds;
-        elapsedHours = totalSeconds / 60 / 60;
-        elapsedMinutes = totalSeconds / 60 - elapsedHours * 60;
-        elapsedSeconds = totalSeconds - elapsedMinutes * 60 - elapsedHours * 60 * 60;
+        int totalHours, totalMinutes;
+        totalHours = totalSeconds / 60 / 60;
+        totalMinutes = totalSeconds / 60 - totalHours * 60;
+        totalSeconds = totalSeconds - totalMinutes * 60 - totalHours * 60 * 60;
 
-        System.out.printf("Completion: (%d/%d) %.2f%% Remaining Time: %dh %dm %ds of %dh %dm %ds Frame Timing: %.2f sec/frame\r",
+        int previousTimingIndex = currentTimingIndex - 1;
+        while (previousTimingIndex < 0) previousTimingIndex += lastTimings.length;
+
+        System.out.printf("Completion: (%d/%d) %.2f%% Remaining Time: %dh %dm %ds of %dh %dm %ds Frame Timing: %.2f sec/frame (%.2f avg)\r",
                 currentScanPass + 1, targetScanPasses,
                 (currentScanPass + 1) / (float) targetScanPasses * 100,
-                completionHours, completionMinutes, completionSeconds,
-                elapsedHours + completionHours, elapsedMinutes + completionMinutes, elapsedSeconds + completionSeconds,
-                lastTimings[currentScanPass] / 1000f);
+                remainingHours, remainingMinutes, remainingSeconds,
+                totalHours, totalMinutes, totalSeconds,
+                lastTimings[previousTimingIndex] / 1000f, averageMsPerScanPass / 1000f);
     }
 }
