@@ -23,17 +23,17 @@ public class TestScene extends Scene implements FrameCalculator.FrameCompleteCal
 //    private static final int HEIGHT = 15360;
 //    private static final int WIDTH = 8640;
     //16k
-//    private static final int WIDTH = 15360;
-//    private static final int HEIGHT = 8640;
+    private static final int WIDTH = 15360;
+    private static final int HEIGHT = 8640;
     //4k
 //    private static final int WIDTH = 3840;
 //    private static final int HEIGHT = 2160;
     //1k
-    private static final int WIDTH = 1920;
-    private static final int HEIGHT = 1080;
+//    private static final int WIDTH = 1920;
+//    private static final int HEIGHT = 1080;
     private static final int WIDTH_LOW_RES = 600;
     private static final int HEIGHT_LOW_RES = 400;
-    private static final boolean MANUAL_MODE = false;
+    private static final boolean MANUAL_MODE = true;
 
     private FrameCalculator frameCalculator;
     private CameraController cameraController;
@@ -70,7 +70,7 @@ public class TestScene extends Scene implements FrameCalculator.FrameCompleteCal
 //        float renderDistance = 3000;
 
         if (MANUAL_MODE) {
-            bulbSteps = 30;
+            bulbSteps = 90;
             bulbGranularity = 0.0001f;
             minCollision = 0.0001f;
             maxCollision = 0.001f;
@@ -87,9 +87,6 @@ public class TestScene extends Scene implements FrameCalculator.FrameCompleteCal
                 .endColor(ColorUtils.WHITE)
                 .glowColor(color(0, 0, 120, 255))
                 .glowIntensity(.0f)
-                .pitchRadians(0f)
-                .yawRadians(0f)
-                .rollRadians(0f)
                 .build();
 
         List<Drawable> drawables = new ArrayList<>(Arrays.asList(
@@ -117,13 +114,13 @@ public class TestScene extends Scene implements FrameCalculator.FrameCompleteCal
                         .minAmbientLevel(1f)
                         .maxAmbientLevel(0f)
                         .minAmbientSteps(0)
-                        .maxAmbientSteps(500)
+                        .maxAmbientSteps(100)
                         .minCollisionDistance(minCollision)
                         .maxCollisionDistance(maxCollision)
                         .build());
 
-//        frameCalculator = SerialScatteredFrameCalculator.builder()
-        frameCalculator = ParallelScatteredFrameCalculator.builder()
+        frameCalculator = SerialScatteredFrameCalculator.builder()
+//        frameCalculator = ParallelScatteredFrameCalculator.builder()
                 .callback(this)
                 .camera(camera)
                 .rayEngine(rayEngine)
@@ -145,9 +142,9 @@ public class TestScene extends Scene implements FrameCalculator.FrameCompleteCal
                 .lights(lights)
                 .build();
 
-        camera.setPosition(new Vector3(0.463956f, 0.675000f, 0.513410f));
+        camera.setPosition(new Vector3(0.945169f, 0.475003f, 0.810790f));
         camera.setUpVector(new Vector3(0.451098f, 0.881921f, -0.136840f));
-        camera.setDirection(new Vector3(-0.802022f, 0.333328f, -0.495633f));
+        camera.setDirection(new Vector3(-0.710235f, 0.261894f, -0.653436f));
 
         try {
             System.out.println(JsonUtils.getObjectMapperInstance().writeValueAsString(settings));

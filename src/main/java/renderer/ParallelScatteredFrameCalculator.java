@@ -41,7 +41,7 @@ public class ParallelScatteredFrameCalculator extends FrameCalculator {
                         getCamera().getPixelPosition(x, threadY, position);
                         getCamera().getPixelDirection(x, threadY, direction);
 
-                        this.writePixel(x, threadY, rayEngine.calculateRay(direction, position, 50));
+                        this.writePixel(x, threadY, rayEngine.calculateRay(direction, position, timeIndex));
                     }
                 });
             } catch (Exception e) {

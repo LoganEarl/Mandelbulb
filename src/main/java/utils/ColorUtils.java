@@ -1,5 +1,7 @@
 package utils;
 
+import static java.lang.Math.abs;
+
 public class ColorUtils {
     public static final int WHITE = color(255, 255, 255, 255);
     public static final int GRAY = color(128, 128, 128, 255);
@@ -37,6 +39,15 @@ public class ColorUtils {
     public static int colorF(float r, float g, float b, float a) {
         return color((int) (r * 255f), (int) (g * 255f), (int) (b * 255f), (int) (a * 255f));
     }
+
+    //Takes a number from 0 to 1 and maps it to an rgb value
+    public static int colorFromScalar(float s) {
+        float red = (float)(0.5f + (Math.sin(Math.PI * 2 * (s - 9/12f)))/2f);
+        float green = (float)(0.5f + (Math.sin(Math.PI * 2 * (s - 1/12f)))/2f);
+        float blue = (float)(0.5f + (Math.sin(Math.PI * 2 * (s - 5/12f)))/2f);
+        return colorF(red, green, blue, 1);
+    }
+
     public static int color(int r, int g, int b, int a) {
         r = Utils.constrainInt(r, 0, 255);
         g = Utils.constrainInt(g, 0, 255);
@@ -51,9 +62,9 @@ public class ColorUtils {
 
     public static int interpolate(int startColor, int endColor, float scalar) {
 
-        int redDiff = red(startColor) - red(endColor);
-        int greenDiff = green(startColor) - green(endColor);
-        int blueDiff = blue(startColor) - blue(endColor);
+        int redDiff = abs(red(startColor) - red(endColor));
+        int greenDiff = abs(green(startColor) - green(endColor));
+        int blueDiff = abs(blue(startColor) - blue(endColor));
 
         return color(
                 red(startColor) + (int) (redDiff * scalar),

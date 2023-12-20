@@ -18,9 +18,6 @@ public class Bulb implements Drawable {
 
 
     private Vector3 position;
-    private float pitchRadians;
-    private float yawRadians;
-    private float rollRadians;
     private float reflectivity;
     private int steps;
     private float period;
@@ -30,8 +27,8 @@ public class Bulb implements Drawable {
     private int glowColor;
     private float glowIntensity;
 
-    @Builder()
-    public Bulb(Vector3 position, float reflectivity, int steps, float period, float granularity, int startColor, int endColor, int glowColor, float glowIntensity, float pitchRadians, float yawRadians, float rollRadians) {
+    @Builder
+    public Bulb(Vector3 position, float reflectivity, int steps, float period, float granularity, int startColor, int endColor, int glowColor, float glowIntensity) {
         this.position = position;
         this.reflectivity = reflectivity;
         this.steps = steps;
@@ -41,9 +38,6 @@ public class Bulb implements Drawable {
         this.endColor = endColor;
         this.glowColor = glowColor;
         this.glowIntensity = glowIntensity;
-        this.pitchRadians = pitchRadians;
-        this.yawRadians = yawRadians;
-        this.rollRadians = rollRadians;
     }
 
     public float distanceToSurface(int timeIndex, Vector3 point) {
@@ -81,7 +75,7 @@ public class Bulb implements Drawable {
             z.scale(zr);
             z.add(new Vector3d(point));
         }
-        return new float[]{(float)r, (float)dr, (float) i};
+        return new float[]{(float)r, (float)dr, i};
     }
 
     @Override
@@ -113,6 +107,9 @@ public class Bulb implements Drawable {
     }
 
     public int getColor(int timeIndex, Vector3 position) {
+        if(startColor == endColor) {
+            return startColor;
+        }
         float[] rdr = iterate(timeIndex, position);
 
 //        Some magic numbers that look good

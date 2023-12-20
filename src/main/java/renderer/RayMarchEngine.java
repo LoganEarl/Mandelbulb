@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Delegate;
 import settings.RayEngineSettings;
+import utils.ColorUtils;
 import utils.Utils;
 import utils.Vector3;
 
@@ -33,10 +34,11 @@ public class RayMarchEngine implements RayEngine {
         int stepNum = 0;
         float cumulativeGlowIntensity = 0;
         Integer glowColor = null;
+        DistanceCalculation closestInfo = new DistanceCalculation(getMaxRenderDistance(), -1);
 
         while (dist(start.x, start.y, start.z,
-                position.x, position.y, position.z) < getMaxRenderDistance() && color == getBackgroundColor()) {
-            DistanceCalculation closestInfo = closestDistanceTo(position, timeIndex);
+                position.x, position.y, position.z) < getMaxRenderDistance() && color == getBackgroundColor() && closestInfo.distance >= getCollisionDistance(position)) {
+            closestInfo = closestDistanceTo(position, timeIndex);
             Drawable closestDrawable = objectsInScene.get(closestInfo.index);
 
             if (closestInfo.distance < getCollisionDistance(position)) {
@@ -51,6 +53,7 @@ public class RayMarchEngine implements RayEngine {
                 float ambient = traditionalAmbientModel(stepNum);
 
                 color = applyColorModel(rawColor, reflectionColor, lightColor, reflectivity, ambient);
+//                color = applyStepnumColorModel(stepNum);
             } else {
                 direction.normalize();
                 direction.scale(closestInfo.distance * .9f);
@@ -82,37 +85,50 @@ public class RayMarchEngine implements RayEngine {
     }
 
     private float sinusoidalAmbientModel(int stepNum) {
-        int minAmbientSteps = getMinAmbientSteps();
-        int maxAmbientSteps = getMaxAmbientSteps();
         float maxAmbientLevel = getMaxAmbientLevel();
         float minAmbientLevel = getMinAmbientLevel();
-        int ambientRange = maxAmbientSteps - minAmbientSteps;
-        float percentage = (float) ((Math.sin((((stepNum - minAmbientSteps) - ambientRange / 2f) * Math.PI) / ambientRange)) / 2f + .5);
-        return percentage * (maxAmbientLevel - minAmbientLevel) + minAmbientLevel;
+        return sinusoidalInterpolationScalar(stepNum) * (maxAmbientLevel - minAmbientLevel) + minAmbientLevel;
     }
 
-    private float piecewiseLinearAmbientModel(int stepNum) {
+    private float sinusoidalInterpolationScalar(int stepNum) {
         int minAmbientSteps = getMinAmbientSteps();
         int maxAmbientSteps = getMaxAmbientSteps();
-        float maxAmbientLevel = getMaxAmbientLevel();
-        float minAmbientLevel = getMinAmbientLevel();
+        int ambientRange = maxAmbientSteps - minAmbientSteps;
+        return (float) ((Math.sin((((stepNum - minAmbientSteps) - ambientRange / 2f) * Math.PI) / ambientRange)) / 2f + .5);
+    }
+
+    private float piecewiseLinearInterpolationScalar(int stepNum) {
+        int minAmbientSteps = getMinAmbientSteps();
+        int maxAmbientSteps = getMaxAmbientSteps();
         int ambientRange = maxAmbientSteps - minAmbientSteps;
         int numWraps = (stepNum - minAmbientSteps) / ambientRange;
         int steps = (stepNum - minAmbientSteps) % ambientRange + minAmbientSteps;
         int min = numWraps % 2 == 1 ? maxAmbientSteps : minAmbientSteps;
         int max = numWraps % 2 == 1 ? minAmbientSteps : maxAmbientSteps;
-        float ambientPercentage = (steps - min) / (max - (float) min);
-        return ambientPercentage * (maxAmbientLevel - minAmbientLevel) + minAmbientLevel;
+        return (steps - min) / (max - (float) min);
+    }
+    private float piecewiseLinearAmbientModel(int stepNum) {
+        float maxAmbientLevel = getMaxAmbientLevel();
+        float minAmbientLevel = getMinAmbientLevel();
+        return piecewiseLinearInterpolationScalar(stepNum) * (maxAmbientLevel - minAmbientLevel) + minAmbientLevel;
+    }
+
+    private float boundedInterpolationScalar(int stepNum) {
+        int minAmbientSteps = getMinAmbientSteps();
+        int maxAmbientSteps = getMaxAmbientSteps();
+        int ambientSteps = constrainInt(stepNum, minAmbientSteps, maxAmbientSteps);
+        return (ambientSteps - minAmbientSteps) / (maxAmbientSteps - (float) minAmbientSteps);
     }
 
     private float traditionalAmbientModel(int stepNum) {
-        int minAmbientSteps = getMinAmbientSteps();
-        int maxAmbientSteps = getMaxAmbientSteps();
         float maxAmbientLevel = getMaxAmbientLevel();
         float minAmbientLevel = getMinAmbientLevel();
-        int ambientSteps = constrainInt(stepNum, minAmbientSteps, maxAmbientSteps);
-        float ambientPercentage = (ambientSteps - minAmbientSteps) / (maxAmbientSteps - (float) minAmbientSteps);
-        return ambientPercentage * (maxAmbientLevel - minAmbientLevel) + minAmbientLevel;
+        return boundedInterpolationScalar(stepNum) * (maxAmbientLevel - minAmbientLevel) + minAmbientLevel;
+    }
+
+    private int applyStepnumColorModel(int stepNum) {
+        float scalar = piecewiseLinearInterpolationScalar(stepNum);
+        return ColorUtils.colorFromScalar(scalar);
     }
 
     private int applyColorModel(int rawColor, int reflectionColor, int lightColor, float reflectivity, float ambient) {
@@ -126,7 +142,7 @@ public class RayMarchEngine implements RayEngine {
 
     private float applySingleColorModel(float raw, float reflection, float light, float reflectivity, float ambient) {
         float component = raw * reflectivity + reflection * (1 - reflectivity);
-        component = component * light + ((1 - ambient) * component);
+        component = component * light + (ambient * component);
         return constrain(component, 0, 1);
     }
 
@@ -197,10 +213,12 @@ public class RayMarchEngine implements RayEngine {
                     lightColor = result;
                 else {
                     lightColor = BLACK;
-                    brightness = 0;
+                    brightness = 1;
                 }
-            } else
+            } else {
                 lightColor = BLACK;
+                brightness = 1;
+            }
 
 
             lightColors.add(color(
